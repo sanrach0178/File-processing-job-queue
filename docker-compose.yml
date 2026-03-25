@@ -21,5 +21,21 @@ services:
       - "6379:6379"
     restart: always
 
+  app:
+    build: .
+    container_name: job-queue-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobqueue
+      - SPRING_DATASOURCE_USERNAME=myuser
+      - SPRING_DATASOURCE_PASSWORD=mypassword
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+    restart: on-failure
+
 volumes:
   postgres-data:

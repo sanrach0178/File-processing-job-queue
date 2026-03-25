@@ -44,7 +44,7 @@ public class JobWorker {
                 jobRepository.save(job);
                 log.info("Processing job: {}", jobId);
 
-                int rowCount = processCsv(job.getPayload());
+                int rowCount = processCsv(job.getPayload(), jobId);
 
                 job.setStatus(JobStatus.COMPLETED);
                 job.setResult("Successfully processed " + rowCount + " rows.");
@@ -60,7 +60,7 @@ public class JobWorker {
         });
     }
 
-    private int processCsv(String filePath) throws Exception {
+    private int processCsv(String filePath, Long jobId) throws Exception {
         java.nio.file.Path path = java.nio.file.Paths.get(filePath);
         if (!java.nio.file.Files.exists(path)) {
             throw new RuntimeException("CSV file not found: " + filePath);
@@ -76,7 +76,7 @@ public class JobWorker {
             while ((line = reader.readNext()) != null) {
                 if (isHeader) {
                     isHeader = false;
-                    continue; // Skip header row
+                    continue;
                 }
                 
                 if (line.length >= 3) {
@@ -86,10 +86,11 @@ public class JobWorker {
                     try {
                         person.setAge(Integer.parseInt(line[1].trim()));
                     } catch (NumberFormatException e) {
-                        person.setAge(0); // Fallback for invalid age
+                        person.setAge(0);
                     }
                     
                     person.setCity(line[2].trim());
+                    person.setJobId(jobId);
                     persons.add(person);
                     rowCount++;
                 }

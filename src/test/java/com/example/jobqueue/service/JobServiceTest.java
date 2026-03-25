@@ -37,23 +37,19 @@ class JobServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Mock Redis list operations
         lenient().when(redisTemplate.opsForList()).thenReturn(listOperations);
     }
 
     @Test
     void getJobStatus_ExistingId_ReturnsResponse() {
-        // Arrange
         Long jobId = 1L;
         Job job = new Job();
         job.setId(jobId);
         job.setStatus(JobStatus.COMPLETED);
         when(jobRepository.findById(jobId)).thenReturn(Optional.of(job));
 
-        // Act
         JobResponse response = jobService.getJobStatus(jobId);
 
-        // Assert
         assertNotNull(response);
         assertEquals(jobId, response.getId());
         assertEquals(JobStatus.COMPLETED, response.getStatus());
@@ -62,11 +58,9 @@ class JobServiceTest {
 
     @Test
     void getJobStatus_NonExistingId_ThrowsException() {
-        // Arrange
         Long jobId = 99L;
         when(jobRepository.findById(jobId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(RuntimeException.class, () -> jobService.getJobStatus(jobId));
     }
 }

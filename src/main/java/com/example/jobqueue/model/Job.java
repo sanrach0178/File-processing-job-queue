@@ -7,8 +7,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "jobs")
-@Getter
-@Setter
 public class Job {
     
     @Id
@@ -32,6 +30,21 @@ public class Job {
     
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getPayload() { return payload; }
+    public void setPayload(String payload) { this.payload = payload; }
+    public JobStatus getStatus() { return status; }
+    public void setStatus(JobStatus status) { this.status = status; }
+    public String getResult() { return result; }
+    public void setResult(String result) { this.result = result; }
+    public int getRetriesCount() { return retriesCount; }
+    public void setRetriesCount(int retriesCount) { this.retriesCount = retriesCount; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     
     @PreUpdate
     public void preUpdate() {

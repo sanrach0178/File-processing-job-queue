@@ -1,24 +1,29 @@
 package com.example.jobqueue.service;
 
 import com.example.jobqueue.dto.JobResponse;
+import com.example.jobqueue.exception.ResourceNotFoundException;
 import com.example.jobqueue.model.Job;
 import com.example.jobqueue.model.JobStatus;
 import com.example.jobqueue.repository.JobRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class JobService {
 
+    private static final Logger log = LoggerFactory.getLogger(JobService.class);
     private final JobRepository jobRepository;
     private final StringRedisTemplate redisTemplate;
+    
+    public JobService(JobRepository jobRepository, StringRedisTemplate redisTemplate) {
+        this.jobRepository = jobRepository;
+        this.redisTemplate = redisTemplate;
+    }
     
     private static final String JOB_QUEUE_KEY = "job_queue";
 
@@ -85,8 +90,8 @@ public class JobService {
     }
 
     public JobResponse getJobStatus(Long id) {
-        Job job = jobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+        var job = jobRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found with id: " + id));
         return mapToResponse(job);
     }
 
