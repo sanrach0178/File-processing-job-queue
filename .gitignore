@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Custom Logs and Build Artifacts ###
+*.log
+*.txt
+!README.md
+!HELP.md
