@@ -6,13 +6,68 @@ A high-performance, asynchronous job queue system built with **Spring Boot 3**, 
 
 ## 🏗️ Architecture & Core Features
 
-- **Asynchronous Processing**: Upload files and immediately receive a `Job ID`. The system processes data in the background using a dedicated `JobWorker`.
-- **Redis-Backed Job Queue**: Uses Redis as a robust message broker to manage job distribution and status updates.
-- **Relational Data Management**: Stores job metadata and processed CSV records in PostgreSQL for long-term persistence.
-- **Global Error Handling**: Centralized exception management providing structured JSON error responses.
-- **Automatic API Documentation**: Swagger UI integration for interactive API exploration and testing.
-- **Input Validation**: JSR-303/Jakarta validation for file type, size, and content integrity.
-- **Containerized Deployment**: Ready-to-run with Docker and Docker Compose.
+### System Architecture Flow
+
+The system operates on an asynchronous, producer-consumer architecture designed specifically for handling resource-intensive file parsing tasks without blocking the main application thread.
+
+```mermaid
+graph TD
+    Client(["👤 Client"])
+
+    subgraph "Spring Boot Application"
+        API["🔌 REST API (JobController)"]
+        Service["⚙️ JobService (Producer)"]
+        Worker["👷 JobWorker (Consumer)"]
+    end
+
+    subgraph "Infrastructure"
+        Redis[("🟥 Redis (Queue)")]
+        DB[("🐘 PostgreSQL (DB)")]
+        Disk[("📁 File System")]
+    end
+
+    Client -- "1. POST CSV" --> API
+    API -- "2. Forward" --> Service
+    Service -- "3. Save Temp File" --> Disk
+    Service -- "4. Insert Job (PENDING)" --> DB
+    Service -- "5. Push Job ID" --> Redis
+    Service -- "6. Return 202 Accepted" --> Client
+
+    Worker -- "7. Pop Job ID" --> Redis
+    Worker -- "8. Set Status (PROCESSING)" --> DB
+    Worker -- "9. Read CSV" --> Disk
+    Worker -- "10. Insert Data Rows" --> DB
+    Worker -- "11. Set COMPLETED\n& Delete File" --> DB
+    Worker -. "12. Repush on Error\n(Max 3 retries)" .-> Redis
+```
+
+### Component Breakdown
+
+1. **JobController & JobService (Producer)**
+   - Receives the multipart CSV file via the REST API.
+   - Validates file size, extension, and content structure.
+   - Saves the CSV to a temporary location on the local file system to optimize memory usage.
+   - Creates a new `Job` record in PostgreSQL with status `PENDING`.
+   - Pushes the `Job ID` to a Redis List (`job_queue`), utilizing it as a lightweight, fast message broker.
+   - Immediately returns an HTTP `202 Accepted` response with the Job ID to the client.
+
+2. **JobWorker (Consumer)**
+   - A scheduled component (`@Scheduled`) that continuously polls the Redis queue for pending Job IDs.
+   - Upon consuming a Job ID, it retrieves the job record and updates its state in PostgreSQL to `PROCESSING`.
+   - Streams lines from the temporary CSV file in batches, parses the data, and persists valid records sequentially to the PostgreSQL `person` table.
+   - Ensures fault tolerance: Increments a retry counter up to 3 times on failure, re-queues the job to Redis if eligible, and permanently marks the job as `FAILED` (while executing file cleanup) if retries are exhausted.
+   - On success, updates the job status to `COMPLETED` and deletes the temporary file.
+
+### Core Features
+
+- **Asynchronous Processing**: Upload files and instantly retrieve a `Job ID`, with resource-intensive processing strictly relegated to background worker threads.
+- **Redis-Backed Job Queue**: Utilizes Redis as a robust, in-memory message broker to reliably manage job distribution and decouple web requests from processing logic.
+- **Relational Data Management**: Stores detailed job metadata and processed CSV constituent records in PostgreSQL for querying, tracking, and long-term persistence.
+- **Fault Tolerance & Auto-Retries**: Native retry mechanism (up to 3 times) for mitigating transient failures during the file processing lifecycle.
+- **Global Error Handling**: Centralized `@ControllerAdvice` for robust exception management and standardized, structured JSON error responses.
+- **Input Risk Mitigation**: Comprehensive validations ensuring safe file uploading (type validation, size limits, header checks, and non-empty guarantees).
+- **Automatic API Documentation**: Pre-configured Swagger UI (SpringDoc OpenAPI) integration for interactive API exploration and seamless client test generation.
+- **Containerized Deployment Environment**: Fully packaged and ready-to-run orchestration with Docker and Docker Compose.
 
 ---
 
